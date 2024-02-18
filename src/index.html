@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReaderPal</title>
+
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+      }
+
+      #content {
+        align-items: center;
+        background-color: #f0f0f0;
+        border-inline: 1px solid #ccc;
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        height: 100vh;
+        justify-content: space-between;
+        padding-inline: 50px;
+        position: relative;
+        text-align: center;
+        z-index: 0;
+      }
+
+      #controls button {
+        border: none;
+        bottom: 0;
+        color: #ccc;
+        cursor: pointer;
+        font-size: 32px;
+        position: absolute;
+        top: 0;
+        width: 50px;
+      }
+
+      #controls button#next {
+        right: 0;
+      }
+
+      #controls button#prev {
+        left: 0;
+      }
+
+      #controls button:hover {
+        background-color: rgba(255, 255, 255, 0.5);
+        color: gray;
+      }
+
+      #controls {
+        height: 100%;
+        position: absolute;
+        width: 100%;
+        z-index: -1;
+      }
+
+      #main {
+        display: flex;
+      }
+
+      #reader-pal {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #reader-pal #chat {
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+      }
+
+      #reader-pal #chat #prompt {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: sans-serif;
+        font-size: 16px;
+        padding: 16px;
+        resize: none;
+      }
+
+      #reader-pal .message {
+        padding-inline: 16px;
+        padding-top: 1px;
+      }
+
+      #reader-pal .message.you {
+        background-color: #f0f0f0;
+      }
+
+      #reader-pal .message:not(:last-child) {
+        border-bottom: 1px solid #ccc;
+      }
+
+      #reader-pal #conv {
+        flex: 1;
+        overflow: auto;
+      }
+
+      #toc a {
+        color: #333;
+        display: block;
+        padding: 10px;
+        text-decoration: none;
+      }
+
+      #toc a.active {
+        font-weight: bold;
+      }
+
+      #toc li {
+        list-style: none;
+      }
+
+      #viewer {
+        aspect-ratio: 3 / 4;
+        background-color: #fff;
+        box-shadow: 0 0 4px #ccc;
+        width: 600px;
+      }
+
+      #reader-pal,
+      #toc-wrapper {
+        flex: 0.5;
+        height: 100vh;
+        overflow: auto;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="main">
+      <div id="reader-pal">
+        <div id="conv">
+          <div class="message me">
+            <p><strong>ReaderPal</strong></p>
+            <div>
+              <p>How can I help you today?</p>
+            </div>
+          </div>
+          <div class="message you">
+            <p><strong>You</strong></p>
+            <div>
+              <p>Who are you?</p>
+            </div>
+          </div>
+          <div class="message me">
+            <p><strong>ReaderPal</strong></p>
+            <div>
+              <p>How can I help you today?</p>
+            </div>
+          </div>
+        </div>
+        <div id="chat">
+          <textarea
+            id="prompt"
+            rows="3"
+            placeholder="Chat with me..."
+          ></textarea>
+        </div>
+      </div>
+      <div id="content">
+        <div id="header">
+          <h1 id="title"></h1>
+          <h2 id="author"></h2>
+        </div>
+        <div id="viewer"></div>
+        <p id="progress"></p>
+        <div id="controls">
+          <button id="prev" class="arrow" onclick="rendition.prev()">
+            &#8249;
+          </button>
+          <button id="next" class="arrow" onclick="rendition.next()">
+            &#8250;
+          </button>
+        </div>
+      </div>
+      <div id="toc-wrapper">
+        <ul id="toc"></ul>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+
+    <script>
+      const titleEl = document.getElementById("title");
+      const authorEl = document.getElementById("author");
+      const progressEl = document.getElementById("progress");
+      const tocEl = document.getElementById("toc");
+
+      const book = ePub("./jwt-handbook-v0_14_1.epub");
+      const rendition = book.renderTo("viewer", {
+        width: "100%",
+        height: "100%",
+      });
+      const displayed = rendition.display();
+
+      rendition.themes.default({
+        "#cover-image": {
+          "text-align": "center",
+        },
+        figure: {
+          "margin-inline": "0",
+          "text-align": "center",
+        },
+      });
+
+      document.addEventListener("keyup", function (e) {
+        switch (e.code) {
+          case "ArrowLeft":
+            rendition.prev();
+            break;
+          case "ArrowRight":
+            rendition.next();
+            break;
+        }
+      });
+
+      book.loaded.metadata.then(({ title, creator }) => {
+        titleEl.textContent = title;
+        authorEl.textContent = creator;
+      });
+
+      book.loaded.navigation.then(({ toc }) => {
+        for (const chap of toc) {
+          const listItem = document.createElement("li");
+          const link = document.createElement("a");
+
+          link.textContent = chap.label;
+          link.href = chap.href.split("#")[0];
+
+          link.addEventListener("click", (e) => {
+            e.preventDefault();
+            rendition.display(chap.href);
+          });
+
+          listItem.appendChild(link);
+          tocEl.appendChild(listItem);
+        }
+      });
+
+      rendition.on("rendered", (section) => {
+        toc.querySelector(".active")?.classList.remove("active");
+        toc.querySelector(`[href="${section.href}"]`)?.classList.add("active");
+      });
+
+      rendition.on("relocated", (location) => {
+        progressEl.textContent = `Page ${location.start.displayed.page} of ${location.start.displayed.total} in chapter`;
+      });
+    </script>
+  </body>
+</html>
