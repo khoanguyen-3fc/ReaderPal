@@ -94,6 +94,18 @@
         border-bottom: 1px solid #ccc;
       }
 
+      @keyframes typing {
+        0% {
+          opacity: 0;
+        }
+      }
+
+      #reader-pal .message p.typing::after {
+        content: "_";
+        display: inline-block;
+        animation: typing 0.5s steps(2)  infinite;
+      }
+
       #reader-pal #conv {
         flex: 1;
         overflow: auto;
@@ -211,6 +223,7 @@
 
       let currentPage = "";
       let justSelected = "";
+      let responding = false;
 
       document.addEventListener("keyup", function (e) {
         switch (e.code) {
@@ -226,7 +239,12 @@
       promptEl.addEventListener("keydown", function (e) {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          const message = promptEl.value;
+          if (responding) {
+            return;
+          }
+
+          responding = true;
+          const message = promptEl.value.trim();
           promptEl.value = "";
           const messageEl = document.createElement("div");
           messageEl.classList.add("message", "you");
@@ -239,11 +257,25 @@
           const response = message; // echo
           const responseEl = document.createElement("div");
           responseEl.classList.add("message", "me");
-          responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p>${response}</p></div>`;
+          responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p class="typing"></p></div>`;
           document.getElementById("conv").appendChild(responseEl);
-          document
-            .getElementById("conv")
-            .scrollTo(0, document.getElementById("conv").scrollHeight);
+
+          (async () => {
+            const words = response.split(" ");
+            const pEl = responseEl.lastElementChild.lastElementChild;
+            for (const word of words) {
+              pEl.textContent += word;
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              pEl.textContent += " ";
+            }
+
+            pEl.classList.remove("typing");
+
+            document
+              .getElementById("conv")
+              .scrollTo(0, document.getElementById("conv").scrollHeight);
+            responding = false;
+          })();
         } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           promptEl.value = "";
