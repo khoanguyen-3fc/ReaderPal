@@ -208,6 +208,9 @@
         },
       });
 
+      let currentPage = "";
+      let justSelected = "";
+
       document.addEventListener("keyup", function (e) {
         switch (e.code) {
           case "ArrowLeft":
@@ -248,7 +251,35 @@
       });
 
       rendition.on("relocated", (location) => {
+        const startCfi = location.start.cfi.slice(0, -1).split("/");
+        const endCfi = location.end.cfi.split("/");
+
+        let i = 0;
+        for (i = 0; i < Math.min(startCfi.length, endCfi.length); i++) {
+          if (startCfi[i] !== endCfi[i]) {
+            break;
+          }
+        }
+
+        const cfiRange = [
+          startCfi.slice(0, i).join("/"),
+          startCfi.slice(i).join("/"),
+          endCfi.slice(i).join("/"),
+        ].join(",");
+
+        book.getRange(cfiRange).then((range) => {
+          const content = range.cloneContents();
+          const serializer = new XMLSerializer();
+          currentPage = serializer.serializeToString(content);
+        });
+
         progressEl.textContent = `Page ${location.start.displayed.page} of ${location.start.displayed.total} in chapter`;
+      });
+
+      rendition.on("selected", (cfiRange) => {
+        book.getRange(cfiRange).then((range) => {
+          justSelected = range.toString();
+        });
       });
     </script>
   </body>
