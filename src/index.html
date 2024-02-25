@@ -251,6 +251,8 @@
       });
 
       rendition.on("relocated", (location) => {
+        justSelected = "";
+
         const startCfi = location.start.cfi.slice(0, -1).split("/");
         const endCfi = location.end.cfi.split("/");
 
