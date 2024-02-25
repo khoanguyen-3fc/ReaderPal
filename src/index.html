@@ -190,6 +190,7 @@
       const authorEl = document.getElementById("author");
       const progressEl = document.getElementById("progress");
       const tocEl = document.getElementById("toc");
+      const promptEl = document.getElementById("prompt");
 
       const book = ePub("./jwt-handbook-v0_14_1.epub");
       const rendition = book.renderTo("viewer", {
@@ -219,6 +220,33 @@
           case "ArrowRight":
             rendition.next();
             break;
+        }
+      });
+
+      promptEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          const message = promptEl.value;
+          promptEl.value = "";
+          const messageEl = document.createElement("div");
+          messageEl.classList.add("message", "you");
+          messageEl.innerHTML = `<p><strong>You</strong></p><div><p>${message}</p></div>`;
+          document.getElementById("conv").appendChild(messageEl);
+          document
+            .getElementById("conv")
+            .scrollTo(0, document.getElementById("conv").scrollHeight);
+
+          const response = message; // echo
+          const responseEl = document.createElement("div");
+          responseEl.classList.add("message", "me");
+          responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p>${response}</p></div>`;
+          document.getElementById("conv").appendChild(responseEl);
+          document
+            .getElementById("conv")
+            .scrollTo(0, document.getElementById("conv").scrollHeight);
+        } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          promptEl.value = "";
         }
       });
 
