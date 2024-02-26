@@ -103,7 +103,7 @@
       #reader-pal .message p.typing::after {
         content: "_";
         display: inline-block;
-        animation: typing 0.5s steps(2)  infinite;
+        animation: typing 0.5s steps(2) infinite;
       }
 
       #reader-pal #conv {
@@ -198,18 +198,24 @@
     <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
 
     <script>
+      /// Global variables
       const titleEl = document.getElementById("title");
       const authorEl = document.getElementById("author");
       const progressEl = document.getElementById("progress");
       const tocEl = document.getElementById("toc");
       const promptEl = document.getElementById("prompt");
 
+      let currentPage = "";
+      let justSelected = "";
+    </script>
+    <script>
+      /// Epub.js
       const book = ePub("./jwt-handbook-v0_14_1.epub");
       const rendition = book.renderTo("viewer", {
         width: "100%",
         height: "100%",
       });
-      const displayed = rendition.display();
+      rendition.display();
 
       rendition.themes.default({
         "#cover-image": {
@@ -221,10 +227,6 @@
         },
       });
 
-      let currentPage = "";
-      let justSelected = "";
-      let responding = false;
-
       document.addEventListener("keyup", function (e) {
         switch (e.code) {
           case "ArrowLeft":
@@ -233,52 +235,6 @@
           case "ArrowRight":
             rendition.next();
             break;
-        }
-      });
-
-      promptEl.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          if (responding) {
-            return;
-          }
-
-          responding = true;
-          const message = promptEl.value.trim();
-          promptEl.value = "";
-          const messageEl = document.createElement("div");
-          messageEl.classList.add("message", "you");
-          messageEl.innerHTML = `<p><strong>You</strong></p><div><p>${message}</p></div>`;
-          document.getElementById("conv").appendChild(messageEl);
-          document
-            .getElementById("conv")
-            .scrollTo(0, document.getElementById("conv").scrollHeight);
-
-          const response = message; // echo
-          const responseEl = document.createElement("div");
-          responseEl.classList.add("message", "me");
-          responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p class="typing"></p></div>`;
-          document.getElementById("conv").appendChild(responseEl);
-
-          (async () => {
-            const words = response.split(" ");
-            const pEl = responseEl.lastElementChild.lastElementChild;
-            for (const word of words) {
-              pEl.textContent += word;
-              await new Promise((resolve) => setTimeout(resolve, 500));
-              pEl.textContent += " ";
-            }
-
-            pEl.classList.remove("typing");
-
-            document
-              .getElementById("conv")
-              .scrollTo(0, document.getElementById("conv").scrollHeight);
-            responding = false;
-          })();
-        } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          promptEl.value = "";
         }
       });
 
@@ -342,6 +298,56 @@
         book.getRange(cfiRange).then((range) => {
           justSelected = range.toString();
         });
+      });
+    </script>
+    <script>
+      /// Chat
+      let responding = false;
+
+      promptEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (responding) {
+            return;
+          }
+
+          responding = true;
+          const message = promptEl.value.trim();
+          promptEl.value = "";
+          const messageEl = document.createElement("div");
+          messageEl.classList.add("message", "you");
+          messageEl.innerHTML = `<p><strong>You</strong></p><div><p>${message}</p></div>`;
+          document.getElementById("conv").appendChild(messageEl);
+          document
+            .getElementById("conv")
+            .scrollTo(0, document.getElementById("conv").scrollHeight);
+
+          const response = message; // echo
+          const responseEl = document.createElement("div");
+          responseEl.classList.add("message", "me");
+          responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p class="typing"></p></div>`;
+          document.getElementById("conv").appendChild(responseEl);
+
+          (async () => {
+            const words = response.split(" ");
+            const pEl = responseEl.lastElementChild.lastElementChild;
+            for (const word of words) {
+              pEl.textContent += word;
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              pEl.textContent += " ";
+            }
+
+            pEl.classList.remove("typing");
+
+            document
+              .getElementById("conv")
+              .scrollTo(0, document.getElementById("conv").scrollHeight);
+            responding = false;
+          })();
+        } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          promptEl.value = "";
+        }
       });
     </script>
   </body>
