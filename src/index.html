@@ -199,6 +199,8 @@ Current content:
 {currentPage}
 \`\`\``;
 
+      const OPENAI_API_KEY = localStorage.getItem("openai-api-key");
+
       let currentPage = "";
       let justSelected = "";
       let currentChapter = "";
@@ -366,15 +368,62 @@ Current content:
           },
         ];
 
-        console.log(chatMessages);
-
         (async () => {
-          const words = response.split(" ");
+          const response = await fetch(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${OPENAI_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: chatMessages,
+                temperature: 0.7,
+                stream: true,
+              }),
+            }
+          );
+
           const pEl = responseEl.lastElementChild.lastElementChild;
-          for (const word of words) {
-            pEl.textContent += word;
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            pEl.textContent += " ";
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          let received = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              // buffer should be empty here
+              // because there are always two newlines at the end
+              break;
+            }
+
+            buffer += decoder.decode(value);
+
+            // parsing SSE
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              const d = line.slice(6);
+
+              if (d === "[DONE]") {
+                // just skip
+                continue;
+              }
+
+              const json = JSON.parse(d);
+              const { content } = json.choices[0].delta;
+
+              if (!content) {
+                continue;
+              }
+
+              received += content;
+              pEl.textContent = received;
+            }
           }
 
           pEl.classList.remove("typing");
@@ -384,7 +433,7 @@ Current content:
             .scrollTo(0, document.getElementById("conv").scrollHeight);
 
           messages.push(message);
-          messages.push(response);
+          messages.push(received);
 
           responding = false;
         })();
