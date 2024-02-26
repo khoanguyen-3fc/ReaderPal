@@ -346,7 +346,27 @@ Current content:
           .replace("{chapter}", currentChapter)
           .replace("{justSelected}", justSelected)
           .replace("{currentPage}", currentPage);
-        console.log(prompt);
+
+        const chatMessages = [
+          {
+            role: "system",
+            content: PROMPT_INIT,
+          },
+          ...messages.map((m, idx) => ({
+            role: idx % 2 === 0 ? "assistant" : "user",
+            content: m,
+          })),
+          {
+            role: "system",
+            content: prompt,
+          },
+          {
+            role: "user",
+            content: message,
+          },
+        ];
+
+        console.log(chatMessages);
 
         (async () => {
           const words = response.split(" ");
