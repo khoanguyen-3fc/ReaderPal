@@ -311,9 +311,14 @@ Current content:
       function clearChat() {
         const convEl = document.getElementById("conv");
         promptEl.value = "";
-        while (convEl.firstChild) {
-          convEl.removeChild(convEl.firstChild);
-        }
+        convEl.innerHTML = "";
+
+        messages.splice(1);
+
+        const messageEl = document.createElement("div");
+        messageEl.classList.add("message", "me");
+        messageEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p>${messages[0]}</p></div>`;
+        document.getElementById("conv").appendChild(messageEl);
       }
 
       function sendMessage() {
@@ -438,12 +443,7 @@ Current content:
         })();
       }
 
-      {
-        const messageEl = document.createElement("div");
-        messageEl.classList.add("message", "me");
-        messageEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p>${messages[0]}</p></div>`;
-        document.getElementById("conv").appendChild(messageEl);
-      }
+      clearChat();
 
       promptEl.addEventListener("keydown", function (e) {
         if (e.key === "Enter" && !e.shiftKey) {
