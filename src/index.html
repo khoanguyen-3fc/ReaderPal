@@ -145,26 +145,7 @@
   <body>
     <div id="main">
       <div id="reader-pal">
-        <div id="conv">
-          <div class="message me">
-            <p><strong>ReaderPal</strong></p>
-            <div>
-              <p>How can I help you today?</p>
-            </div>
-          </div>
-          <div class="message you">
-            <p><strong>You</strong></p>
-            <div>
-              <p>Who are you?</p>
-            </div>
-          </div>
-          <div class="message me">
-            <p><strong>ReaderPal</strong></p>
-            <div>
-              <p>How can I help you today?</p>
-            </div>
-          </div>
-        </div>
+        <div id="conv"></div>
         <div id="chat">
           <textarea
             id="prompt"
@@ -205,8 +186,22 @@
       const tocEl = document.getElementById("toc");
       const promptEl = document.getElementById("prompt");
 
+      const PROMPT_INIT =
+        "You are ReaderPal, an AI assistant for reading books.";
+      const PROMPT_DATA = `User is reading: "{book}" by {author}
+Current chapter: "{chapter}"
+Current selected:
+\`\`\`
+{justSelected}
+\`\`\`
+Current content:
+\`\`\`
+{currentPage}
+\`\`\``;
+
       let currentPage = "";
       let justSelected = "";
+      let currentChapter = "";
     </script>
     <script>
       /// Epub.js
@@ -262,8 +257,14 @@
       });
 
       rendition.on("rendered", (section) => {
+        const tocItem = toc.querySelector(`[href="${section.href}"]`);
         toc.querySelector(".active")?.classList.remove("active");
-        toc.querySelector(`[href="${section.href}"]`)?.classList.add("active");
+        if (tocItem) {
+          tocItem.classList.add("active");
+          currentChapter = tocItem.textContent;
+        } else {
+          currentChapter = "";
+        }
       });
 
       rendition.on("relocated", (location) => {
@@ -302,51 +303,87 @@
     </script>
     <script>
       /// Chat
+      const messages = ["How can I help you today?"];
       let responding = false;
 
-      promptEl.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          if (responding) {
-            return;
+      function clearChat() {
+        const convEl = document.getElementById("conv");
+        promptEl.value = "";
+        while (convEl.firstChild) {
+          convEl.removeChild(convEl.firstChild);
+        }
+      }
+
+      function sendMessage() {
+        if (responding) {
+          return;
+        }
+
+        const message = promptEl.value.trim();
+        if (!message) {
+          return;
+        }
+
+        responding = true;
+        promptEl.value = "";
+
+        const messageEl = document.createElement("div");
+        messageEl.classList.add("message", "you");
+        messageEl.innerHTML = `<p><strong>You</strong></p><div><p>${message}</p></div>`;
+        document.getElementById("conv").appendChild(messageEl);
+        document
+          .getElementById("conv")
+          .scrollTo(0, document.getElementById("conv").scrollHeight);
+
+        const response = message; // echo
+        const responseEl = document.createElement("div");
+        responseEl.classList.add("message", "me");
+        responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p class="typing"></p></div>`;
+        document.getElementById("conv").appendChild(responseEl);
+
+        const prompt = PROMPT_DATA.replace("{book}", titleEl.textContent)
+          .replace("{author}", authorEl.textContent)
+          .replace("{chapter}", currentChapter)
+          .replace("{justSelected}", justSelected)
+          .replace("{currentPage}", currentPage);
+        console.log(prompt);
+
+        (async () => {
+          const words = response.split(" ");
+          const pEl = responseEl.lastElementChild.lastElementChild;
+          for (const word of words) {
+            pEl.textContent += word;
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            pEl.textContent += " ";
           }
 
-          responding = true;
-          const message = promptEl.value.trim();
-          promptEl.value = "";
-          const messageEl = document.createElement("div");
-          messageEl.classList.add("message", "you");
-          messageEl.innerHTML = `<p><strong>You</strong></p><div><p>${message}</p></div>`;
-          document.getElementById("conv").appendChild(messageEl);
+          pEl.classList.remove("typing");
+
           document
             .getElementById("conv")
             .scrollTo(0, document.getElementById("conv").scrollHeight);
 
-          const response = message; // echo
-          const responseEl = document.createElement("div");
-          responseEl.classList.add("message", "me");
-          responseEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p class="typing"></p></div>`;
-          document.getElementById("conv").appendChild(responseEl);
+          messages.push(message);
+          messages.push(response);
 
-          (async () => {
-            const words = response.split(" ");
-            const pEl = responseEl.lastElementChild.lastElementChild;
-            for (const word of words) {
-              pEl.textContent += word;
-              await new Promise((resolve) => setTimeout(resolve, 500));
-              pEl.textContent += " ";
-            }
+          responding = false;
+        })();
+      }
 
-            pEl.classList.remove("typing");
+      {
+        const messageEl = document.createElement("div");
+        messageEl.classList.add("message", "me");
+        messageEl.innerHTML = `<p><strong>ReaderPal</strong></p><div><p>${messages[0]}</p></div>`;
+        document.getElementById("conv").appendChild(messageEl);
+      }
 
-            document
-              .getElementById("conv")
-              .scrollTo(0, document.getElementById("conv").scrollHeight);
-            responding = false;
-          })();
+      promptEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
         } else if (e.key === "l" && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
-          promptEl.value = "";
+          clearChat();
         }
       });
     </script>
